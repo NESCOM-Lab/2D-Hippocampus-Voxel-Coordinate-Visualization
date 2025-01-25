@@ -44,8 +44,15 @@ st.title("2D Slice Viewer")
 uploaded_file = st.file_uploader("Choose a .xyz file", type="xyz")
 
 if uploaded_file is not None:
+    # Initialize data & slice data (save across switching between multiple pages)
+    # This runs once
+    if "data_" not in st.session_state:
+        st.session_state.data_ = load_xyz(uploaded_file)
+    if "slice_data_" not in st.session_state:
+        st.session_state.slice_data_ = None
+
     # Load the data
-    data = load_xyz(uploaded_file)
+    data = st.session_state.data_
 
     # Extract unique z-values for the dropdown
     unique_z_values = np.unique(data[:, 2])
@@ -66,7 +73,8 @@ if uploaded_file is not None:
         after_z = None
 
     # Filter data for the selected z-value
-    slice_data = data[data[:, 2] == selected_z]
+    st.session_state.slice_data_ = data[data[:, 2] == selected_z]
+    slice_data = st.session_state.slice_data_
 
     # Filter data for before and after slices
     if before_z is not None:
@@ -267,9 +275,16 @@ if uploaded_file is not None:
                 mask = np.array([(x, y) not in st.session_state.removed_points for x, y in zip(slice_data[:, 0], slice_data[:, 1])])
                 # mask = np.array([(x, y) != [(1386.46, 5695.84)] for x, y in zip(slice_data[:, 0], slice_data[:, 1])])
                 slice_data = slice_data[mask]
-                st.write("Modified points are:")
-                st.write(slice_data)
 
+                # Update slice data
+                # st.session_state.slice_data_ = slice_data
+
+                # Update all 3D data
+                mask_3d = np.array([(x, y, z) not in st.session_state.removed_points_3d for x, y, z in zip(data[:, 0], data[:, 1], data[:, 2])])
+                data = data[mask_3d]
+                st.session_state.data_ = data
+
+                
                 # Re-plot the updated slice data
                 fig = px.scatter(x=slice_data[:, 0], y=slice_data[:, 1], title=f"Updated 2D Slice at z = {selected_z}", template="plotly")
                 st.plotly_chart(fig)
