@@ -102,8 +102,6 @@ if uploaded_file is not None:
     # Radio buttons for choosing mode
     mode = st.radio("Choose action:", ("","Add points", "Delete points", "Grid points"), index = 0)
     
-    st.write("Before points are:")
-    st.write(data)
     if mode == "Add points":
         # Define the dimensions of the grid with padding
         padding = 100  # Adjust this value to increase/decrease the padding
@@ -279,14 +277,10 @@ if uploaded_file is not None:
         # Display the "Save modified data" button only if there are removed points
         if st.session_state.removed_points:
             if st.button("Save modified data"):
-                st.write("Removing points: ")
-                st.write(st.session_state.removed_points)
                 # Filter out removed points from the original data
                 mask = np.array([(x, y, z) not in st.session_state.removed_points_3d for x, y, z in zip(data[:, 0], data[:, 1], data[:, 2])])
                 modified_data = data[mask]
                 # modified_data = modified_data[mask]
-                st.write("Printing MASK")
-                st.write(data[mask])
                 
                 modified_data = modified_data[:, :3]
                 
