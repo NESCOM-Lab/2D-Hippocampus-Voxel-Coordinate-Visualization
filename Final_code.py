@@ -102,6 +102,8 @@ if uploaded_file is not None:
     # Radio buttons for choosing mode
     mode = st.radio("Choose action:", ("","Add points", "Delete points", "Grid points"), index = 0)
     
+    st.write("Before points are:")
+    st.write(data)
     if mode == "Add points":
         # Define the dimensions of the grid with padding
         padding = 100  # Adjust this value to increase/decrease the padding
@@ -238,6 +240,7 @@ if uploaded_file is not None:
         # Use session state to keep track of removed points
         if 'removed_points' not in st.session_state:
             st.session_state.removed_points = []
+            st.session_state.removed_points_3d = []
 
         if selected_points:
             # Get the first selected point
@@ -256,13 +259,18 @@ if uploaded_file is not None:
                 for elem in selected_points:
                     point_x = elem['x']
                     point_y = elem['y']
+                    point_z = selected_z
                     
                     # Add the point to the removed points list
                     st.session_state.removed_points.append((point_x, point_y))
+                    st.session_state.removed_points_3d.append((point_x, point_y, point_z))
 
                 # Filter out removed points from slice_data
                 mask = np.array([(x, y) not in st.session_state.removed_points for x, y in zip(slice_data[:, 0], slice_data[:, 1])])
+                # mask = np.array([(x, y) != [(1386.46, 5695.84)] for x, y in zip(slice_data[:, 0], slice_data[:, 1])])
                 slice_data = slice_data[mask]
+                st.write("Modified points are:")
+                st.write(slice_data)
 
                 # Re-plot the updated slice data
                 fig = px.scatter(x=slice_data[:, 0], y=slice_data[:, 1], title=f"Updated 2D Slice at z = {selected_z}", template="plotly")
@@ -271,9 +279,14 @@ if uploaded_file is not None:
         # Display the "Save modified data" button only if there are removed points
         if st.session_state.removed_points:
             if st.button("Save modified data"):
+                st.write("Removing points: ")
+                st.write(st.session_state.removed_points)
                 # Filter out removed points from the original data
-                mask = np.array([(x, y, z) not in st.session_state.removed_points for x, y, z in zip(data[:, 0], data[:, 1], data[:, 2])])
+                mask = np.array([(x, y, z) not in st.session_state.removed_points_3d for x, y, z in zip(data[:, 0], data[:, 1], data[:, 2])])
                 modified_data = data[mask]
+                # modified_data = modified_data[mask]
+                st.write("Printing MASK")
+                st.write(data[mask])
                 
                 modified_data = modified_data[:, :3]
                 
