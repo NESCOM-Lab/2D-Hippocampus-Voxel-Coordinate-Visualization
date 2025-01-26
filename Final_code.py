@@ -206,6 +206,10 @@ if uploaded_file is not None:
                 
                 # Display the clicked point
                 st.write(f"You clicked on the following point: x = {x_click}, y = {y_click}")
+
+                if st.button("Update data"):
+                    # Save updated data to session
+                    st.session_state.data_ = combined_data
                 
                 # Save button to trigger the saving process
                 if st.button("Save modified data"):
