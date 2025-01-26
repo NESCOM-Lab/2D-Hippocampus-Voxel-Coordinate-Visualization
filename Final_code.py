@@ -224,7 +224,7 @@ if uploaded_file is not None:
                         st.error("Additional points should have exactly three columns (x, y, z).")
                     else:
                         # Remove the selected slice data from the original dataset
-                        modified_data = modified_data[modified_data[:, 2] != selected_z]
+                        # modified_data = modified_data[modified_data[:, 2] != selected_z] #what is the point of this?
                         
                         # Combine the modified slice data with the modified original dataset
                         combined_data = np.vstack([modified_data, additional_points_np])
@@ -301,7 +301,7 @@ if uploaded_file is not None:
                 modified_data = data[mask]
                 # modified_data = modified_data[mask]
                 
-                modified_data = modified_data[:, :3]
+                # modified_data = modified_data[:, :3] #this strips out the other properties?
                 
                 # Generate a timestamp for the filename
                 timestamp = datetime.datetime.now().strftime("%Y.%m.%d - %H-%M-%S")
