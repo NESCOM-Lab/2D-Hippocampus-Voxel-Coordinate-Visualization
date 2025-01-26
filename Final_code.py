@@ -8,6 +8,7 @@ Created on Tue Jul 30 15:08:01 2024
 
 # Final Program 
 
+from sqlalchemy import func
 import streamlit as st
 import numpy as np
 import plotly.express as px
@@ -17,6 +18,7 @@ import datetime
 from grid_shift import grid_shift
 
 finished_gridding = False
+selected_z = None
 
 # Function to load .xyz file
 def load_xyz(file):
@@ -53,11 +55,52 @@ if uploaded_file is not None:
 
     # Load the data
     data = st.session_state.data_
-
-    # Extract unique z-values for the dropdown
     unique_z_values = np.unique(data[:, 2])
-    selected_z = st.selectbox("Select z-value", unique_z_values)
 
+    
+    # Extract unique z-values for the dropdown
+    if "selected_z_" not in st.session_state:
+        st.session_state.selected_z_ = unique_z_values[0]  # Initialize to the first z-value
+
+    # Layer switching buttons
+    unique_z_values_list = unique_z_values.tolist()
+
+    # Function to move selection to the right
+    def move_right():
+        curr_index = unique_z_values_list.index(st.session_state.selected_z_)
+        if curr_index + 1 < len(unique_z_values_list):
+            st.session_state.selected_z_ = unique_z_values_list[curr_index + 1]
+
+    # Function to move selection to the left
+    def move_left():
+        curr_index = unique_z_values_list.index(st.session_state.selected_z_)
+        if curr_index - 1 >= 0:
+            st.session_state.selected_z_ = unique_z_values_list[curr_index - 1]
+
+    # Add buttons and connect them to their corresponding functions
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("←"):
+            move_left()
+    with col2:
+        if st.button("→"):
+            move_right()
+
+    # Don't prematurely update the selected_z_ state
+    def update_selected__z():
+        st.session_state.selected_z_ = st.session_state.temp_select
+        
+    selected_z = st.selectbox(
+        "Select z-value", 
+        unique_z_values, 
+        index=unique_z_values_list.index(st.session_state.selected_z_), 
+        key="temp_select", 
+        on_change=update_selected__z)
+
+    # Update session state if the dropdown changes
+    st.session_state.selected_z_ = selected_z
+
+    
     # Get the index of the selected z-value
     selected_index = np.where(unique_z_values == selected_z)[0][0]
 
@@ -102,14 +145,16 @@ if uploaded_file is not None:
 
     fig.update_layout(title='Slice comparison', template='plotly')
     st.plotly_chart(fig, use_container_width=True)
-            
+
     # Plot the 2D slice
     fig = px.scatter(x=slice_data[:, 0], y=slice_data[:, 1], title=f"2D Slice at z = {selected_z}", template="plotly")
     st.plotly_chart(fig, use_container_width=True)
-    
+
     # Radio buttons for choosing mode
     mode = st.radio("Choose action:", ("","Add points", "Delete points", "Grid points"), index = 0)
     
+
+
     if mode == "Add points":
         # Define the dimensions of the grid with padding
         padding = 100  # Adjust this value to increase/decrease the padding
