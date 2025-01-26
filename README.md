@@ -12,4 +12,14 @@ The primary goal of this project is to generate 2D visualizations by slicing the
 
 ![image](https://github.com/user-attachments/assets/6de98499-05ca-42fe-8a1f-3a034f1ca754)
 
+## Usage
+Run the program using `streamlit run Final_code.py`
+<br />
+The project supports 3 operations.
+- Adding points: simply click on areas you would like to add points
+- Deleting points: use Box or Lasso select within Plotly to select points for deletion 
+- Gridding points: shifts points into the nearest bin separated by units of 16µ
+
+  
+
 You can find the source data here - https://krasnow1.gmu.edu/cn3/hippocampus3d/.
