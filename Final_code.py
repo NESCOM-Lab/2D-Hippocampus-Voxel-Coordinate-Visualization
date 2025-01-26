@@ -14,7 +14,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from streamlit_plotly_events import plotly_events
 import datetime
-from shift_on_grid import shift_on_grid
+from grid_shift import grid_shift
 
 finished_gridding = False
 
@@ -317,11 +317,11 @@ if uploaded_file is not None:
         time.sleep(1)
         if not st.session_state.finished_gridding:
             print("inside with loop")
-            with st.spinner(text="Gridding... this will take a few minutes"):
-                # Run shift_on_grid function to grid the points and put into numpy array
-                gridded_data = shift_on_grid(data) # Grid the data (long runtime)
-                st.session_state.gridded_np_data = np.asarray(gridded_data, dtype=np.float64) # Convert to numpy array
+            with st.spinner(text="Gridding..."):
+                print("Running grid_shift()")
+                st.session_state.gridded_np_data = grid_shift(data)
                 st.session_state.finished_gridding = True
+                print("finished")
 
         gridded_np_data = st.session_state.gridded_np_data
         # Grab updated slice data
@@ -329,6 +329,9 @@ if uploaded_file is not None:
         # Re-plot the updated slice data
         fig = px.scatter(x=gridded_slice_data[:, 0], y=gridded_slice_data[:, 1], title=f"Updated 2D Slice at z = {selected_z}", template="plotly")
         st.plotly_chart(fig)
+
+        # Update session data
+        st.session_state.data_ = gridded_np_data
 
         # Load in save button for the data
         if st.session_state.finished_gridding:
