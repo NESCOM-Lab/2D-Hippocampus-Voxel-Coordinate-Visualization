@@ -15,7 +15,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from streamlit_plotly_events import plotly_events
 import datetime
-from grid_shift import grid_shift
+from grid_shift import grid_shift_strict
 
 finished_gridding = False
 selected_z = None
@@ -368,7 +368,7 @@ if uploaded_file is not None:
             print("inside with loop")
             with st.spinner(text="Gridding..."):
                 print("Running grid_shift()")
-                st.session_state.gridded_np_data = grid_shift(data)
+                st.session_state.gridded_np_data = grid_shift_strict(data)
                 st.session_state.finished_gridding = True
                 print("finished")
 
