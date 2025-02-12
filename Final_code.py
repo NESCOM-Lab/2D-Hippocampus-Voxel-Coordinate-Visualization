@@ -4,6 +4,11 @@
 Created on Tue Jul 30 15:08:01 2024
 
 @author: saylipatil
+
+Changes to design (Abhishek):
+- Original design was storing the original dataset, additional points, and removed points,
+and then combining/masking them at the end when saving to .xyz file.
+- Changed program design to update the changes (add/delete points) to data as soon as changes are made.
 """
 
 # Final Program 
@@ -44,6 +49,9 @@ st.title("2D Slice Viewer")
 
 # File uploader
 uploaded_file = st.file_uploader("Choose a .xyz file", type="xyz")
+if (uploaded_file is None):
+    # Reset session state
+    st.session_state.clear()
 
 if uploaded_file is not None:
     # Initialize data & slice data (save across switching between multiple pages)
@@ -156,6 +164,7 @@ if uploaded_file is not None:
 
 
     if mode == "Add points":
+        st.write("If you would like added points to be gridded, grid all the points first.")
         # Define the dimensions of the grid with padding
         padding = 100  # Adjust this value to increase/decrease the padding
         x_min, x_max = slice_data[:, 0].min() - padding, slice_data[:, 0].max() + padding
@@ -205,11 +214,17 @@ if uploaded_file is not None:
         if selected_points:
             # Extract the middle point from the click events
             middle_point = selected_points[1] if len(selected_points) > 1 else selected_points[0]
+            
 
             x_click = middle_point['x']
             y_click = middle_point['y']
+            if (st.session_state.finished_gridding):
+                # only grid the clicked points if user has previously gridded
+                x_click = ( round(x_click/16.0)  ) * 16 # nearest grid line for X
+                y_click = ( round(y_click/16.0)  ) * 16 # nearest grid line for Y
             
             # Add the clicked point to the list of points in session state
+            st.session_state.additional_points = [] # prevent dupes (data gets updated later w/ extra pts)
             st.session_state.additional_points.append((x_click, y_click, selected_z))
             
             # Convert additional_points to NumPy array for easy manipulation
@@ -223,72 +238,81 @@ if uploaded_file is not None:
                 slice_data_reduced = slice_data[:, :3]  # Ensure it only has x, y, z
                 combined_data = np.vstack([slice_data_reduced, additional_points_np])
                 
+                # Combine original data (all slices) with additional points now
+                combined_data_all = np.vstack([st.session_state.data_[:, :3], additional_points_np])
+                
+                # Update data
+                st.session_state.data_ = combined_data_all
+
+                
                 # Update the scatter plot with all additional white points
-                updated_scatter = go.Scatter(
-                    x=combined_data[:, 0],
-                    y=combined_data[:, 1],
-                    mode='markers',
-                    marker=dict(color='white', size=5),
-                    text=[f'x: {x:.2f}<br>y: {y:.2f}<br>z: {z:.2f}' for x, y, z in combined_data],
-                    hoverinfo='text',
-                    name=f'Slice at z = {selected_z}'
-                )
+                # updated_scatter = go.Scatter(
+                #     x=combined_data[:, 0],
+                #     y=combined_data[:, 1],
+                #     mode='markers',
+                #     marker=dict(color='white', size=5),
+                #     text=[f'x: {x:.2f}<br>y: {y:.2f}<br>z: {z:.2f}' for x, y, z in combined_data],
+                #     hoverinfo='text',
+                #     name=f'Slice at z = {selected_z}'
+                # )
                 
-                # Define layout for the new figure without heatmap
-                new_layout = go.Layout(
-                    title=f"Updated Slice at z = {selected_z} (with clicked points)",
-                    xaxis=dict(title='x', range=[x_min, x_max]),
-                    yaxis=dict(title='y', range=[y_min, y_max]),
-                    plot_bgcolor='black',
-                    paper_bgcolor='black'
-                )
+                # # Define layout for the new figure without heatmap
+                # new_layout = go.Layout(
+                #     title=f"Updated Slice at z = {selected_z} (with clicked points)",
+                #     xaxis=dict(title='x', range=[x_min, x_max]),
+                #     yaxis=dict(title='y', range=[y_min, y_max]),
+                #     plot_bgcolor='black',
+                #     paper_bgcolor='black'
+                # )
                 
-                # Create the new figure with updated scatter plot
-                new_fig = go.Figure(data=[updated_scatter], layout=new_layout)
+                # # Create the new figure with updated scatter plot
+                # new_fig = go.Figure(data=[updated_scatter], layout=new_layout)
                 
-                # Display the updated plot with white points on a black background
-                st.plotly_chart(new_fig)
+                # # Display the updated plot with white points on a black background
+                # st.plotly_chart(new_fig)
                 
                 # Display the clicked point
                 st.write(f"You clicked on the following point: x = {x_click}, y = {y_click}")
 
-                if st.button("Update data"):
-                    # Save updated data to session
-                    st.session_state.data_ = combined_data
+                # Save updated data to session
+                st.session_state.data_ = combined_data_all
+                st.rerun()
+            
+        # Save button to trigger the saving process
+        if st.button("Save modified data to .xyz file"):
+            # Keep only the first 3 columns from the original dataset
+            modified_data = data[:, :3]
+            
+            # Convert additional_points to NumPy array for easy manipulation
+            additional_points_np = np.array(st.session_state.additional_points)
+            
+            # Ensure the additional_points_np has the correct shape
+            if additional_points_np.shape[1] != 3:
+                st.error("Additional points should have exactly three columns (x, y, z).")
+            else:
+                # Remove the selected slice data from the original dataset
+                # modified_data = modified_data[modified_data[:, 2] != selected_z] #what is the point of this?
                 
-                # Save button to trigger the saving process
-                if st.button("Save modified data"):
-                    # Keep only the first 3 columns from the original dataset
-                    modified_data = data[:, :3]
-                    
-                    # Convert additional_points to NumPy array for easy manipulation
-                    additional_points_np = np.array(st.session_state.additional_points)
-                    
-                    # Ensure the additional_points_np has the correct shape
-                    if additional_points_np.shape[1] != 3:
-                        st.error("Additional points should have exactly three columns (x, y, z).")
-                    else:
-                        # Remove the selected slice data from the original dataset
-                        # modified_data = modified_data[modified_data[:, 2] != selected_z] #what is the point of this?
-                        
-                        # Combine the modified slice data with the modified original dataset
-                        combined_data = np.vstack([modified_data, additional_points_np])
-                        
-                        # Generate a timestamp for the filename
-                        timestamp = datetime.datetime.now().strftime("%Y.%m.%d - %H-%M-%S")
-                        
-                        # Provide a filename for saving
-                        filename = f"{timestamp}.xyz"
-                        
-                        # Save the combined data to a .xyz file
-                        save_xyz(combined_data, filename)
-                        
-                        st.write(f"Updated .xyz file saved as {filename}")
+                # Combine the modified slice data with the modified original dataset
+                # combined_data = np.vstack([modified_data, additional_points_np]) 
+                combined_data = modified_data # data is kept up to date every change, no need to mask
+                
+                # Generate a timestamp for the filename
+                timestamp = datetime.datetime.now().strftime("%Y.%m.%d - %H-%M-%S")
+                
+                # Provide a filename for saving
+                filename = f"{timestamp}.xyz"
+                
+                # Save the combined data to a .xyz file
+                save_xyz(combined_data, filename)
+                
+                st.write(f"Updated .xyz file saved as {filename}")
                     
                     
     elif mode == "Delete points":
+        st.write("Select 'box select' within Plotly to select points")
         # Display the Plotly figure and capture click events
-        # selected_points = plotly_events(fig, click_event=True)
+        fig.update_layout(dragmode="select") # sets default selection as box select
         selected_points = plotly_events(fig, select_event=True)
 
 
@@ -303,12 +327,13 @@ if uploaded_file is not None:
             points_to_remove = selected_points
 
             # Print the coordinates of the selected point
-            st.write("The selected points are: ")
-            for elem in selected_points:
-                st.write(f"x: {elem['x']}, y: {elem['y']}")
+            # st.write("The selected points are: ")
+            # for elem in selected_points:
+            #     st.write(f"x: {elem['x']}, y: {elem['y']}")
 
             # Button to remove the point
             if st.button("Remove selected points"):
+                print("Deleted points")
                 # Parse the selected point's coordinates
 
                 for elem in selected_points:
@@ -338,9 +363,11 @@ if uploaded_file is not None:
                 fig = px.scatter(x=slice_data[:, 0], y=slice_data[:, 1], title=f"Updated 2D Slice at z = {selected_z}", template="plotly")
                 st.plotly_chart(fig)
 
+                st.rerun()
+
         # Display the "Save modified data" button only if there are removed points
         if st.session_state.removed_points:
-            if st.button("Save modified data"):
+            if st.button("Save modified data to .xyz file"):
                 # Filter out removed points from the original data
                 mask = np.array([(x, y, z) not in st.session_state.removed_points_3d for x, y, z in zip(data[:, 0], data[:, 1], data[:, 2])])
                 modified_data = data[mask]
@@ -361,16 +388,19 @@ if uploaded_file is not None:
                 
     elif mode == "Grid points": 
         # Start gridding when radio button pressed
-        import time
         st.write("Points are gridded to the nearest bin that is a multiple of 16")
-        time.sleep(1)
         if not st.session_state.finished_gridding:
+            # If first time gridding
             print("inside with loop")
             with st.spinner(text="Gridding..."):
                 print("Running grid_shift()")
                 st.session_state.gridded_np_data = grid_shift_strict(data)
                 st.session_state.finished_gridding = True
                 print("finished")
+        else:
+            # If data has already been gridded before, use that (up to date with extra/deleted points)
+            st.session_state.gridded_np_data = st.session_state.data_
+
 
         gridded_np_data = st.session_state.gridded_np_data
         # Grab updated slice data
@@ -384,7 +414,7 @@ if uploaded_file is not None:
 
         # Load in save button for the data
         if st.session_state.finished_gridding:
-            save_file = st.button("Save shifted data")
+            save_file = st.button("Save shifted data to .xyz file")
             if save_file:
                 print("pressed save file")
                 save_xyz(gridded_np_data, "gridded_data.xyz")
